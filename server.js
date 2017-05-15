@@ -326,7 +326,7 @@ const compileAndSendDirectoryListing = (path, res) => {
     const html = `
       <!DOCTYPE html>
         <head>
-          <title>${path.slice(2)}</title>
+          <title>${path.slice(1)}</title>
           <meta charset="utf-8">
           <script src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
           <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.4/highlight.min.js"></script>
@@ -337,7 +337,7 @@ const compileAndSendDirectoryListing = (path, res) => {
         </head>
         <body>
           <article class="markdown-body">
-            <h1>Index of ${path.slice(2)}</h1>${list}
+            <h1>Index of ${path.slice(1)}</h1>${list}
             <sup><hr> Served by <a href="https://www.npmjs.com/package/markserv">MarkServ</a> | PID: ${process.pid}</sup>
           </article>
         </body>
@@ -386,7 +386,7 @@ const httpRequestHandler = (req, res) => {
     }
   } catch (err) {
     res.writeHead(200, {'Content-Type': 'text/html'});
-    errormsg('404').write(path.slice(2)).reset().write('\n');
+    errormsg('404').write(path.slice(1)).reset().write('\n');
     res.write('404 :\'(');
     res.end();
     return;
@@ -394,15 +394,15 @@ const httpRequestHandler = (req, res) => {
 
   // Markdown: Browser is requesting a Markdown file
   if (isMarkdown) {
-    msg('markdown').write(path.slice(2)).reset().write('\n');
+    msg('markdown').write(path.slice(1)).reset().write('\n');
     compileAndSendMarkdown(path, res);
   } else if (isDir) {
     // Index: Browser is requesting a Directory Index
-    msg('dir').write(path.slice(2)).reset().write('\n');
+    msg('dir').write(path.slice(1)).reset().write('\n');
     compileAndSendDirectoryListing(path, res);
   } else {
     // Other: Browser requests other MIME typed file (handled by 'send')
-    msg('file').write(path.slice(2)).reset().write('\n');
+    msg('file').write(path.slice(1)).reset().write('\n');
     send(req, path, {root: dir}).pipe(res);
   }
 };
