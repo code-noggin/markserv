@@ -25,7 +25,8 @@ const watchExtensions = markdownExtensions.concat([
   '.gif',
   '.png',
   '.jpg',
-  '.jpeg'
+  '.jpeg',
+  '.svg'
 ]);
 
 const PORT_RANGE = {
@@ -62,6 +63,7 @@ flags.version(pkg.version)
   .option('-d, --dir [type]', 'Serve from directory [dir]', './')
   .option('-p, --port [type]', 'Serve on port [port]', null)
   .option('-h, --header [type]', 'Header .md file', null)
+  .option('-l, --livereloadport [type]', 'Livereload via port [port]', null)
   .option('-r, --footer [type]', 'Footer .md file', null)
   .option('-n, --navigation [type]', 'Navigation .md file', null)
   .option('-a, --address [type]', 'Serve on ip/address [address]', 'localhost')
@@ -293,11 +295,11 @@ const compileAndSendMarkdown = (path, res) => buildHTMLFromMarkDown(path)
     res.writeHead(200);
     res.end(html);
 
-  // Catch if something breaks...
+    // Catch if something breaks...
   }).catch(err => {
     msg('error')
-    .write('Can\'t build HTML: ', err)
-    .reset().write('\n');
+      .write('Can\'t build HTML: ', err)
+      .reset().write('\n');
   });
 
 const compileAndSendDirectoryListing = (path, res) => {
@@ -350,7 +352,7 @@ const compileAndSendDirectoryListing = (path, res) => {
     }
 
     // Send file
-    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.writeHead(200, { 'Content-Type': 'text/html' });
     res.write(html);
     res.end();
   });
@@ -367,8 +369,8 @@ const httpRequestHandler = (req, res) => {
 
   if (flags.verbose) {
     msg('request')
-     .write(unescape(dir) + unescape(originalUrl))
-     .reset().write('\n');
+      .write(unescape(dir) + unescape(originalUrl))
+      .reset().write('\n');
   }
 
   const path = unescape(dir) + unescape(originalUrl);
@@ -385,7 +387,7 @@ const httpRequestHandler = (req, res) => {
       isMarkdown = hasMarkdownExtension(path);
     }
   } catch (err) {
-    res.writeHead(200, {'Content-Type': 'text/html'});
+    res.writeHead(200, { 'Content-Type': 'text/html' });
     errormsg('404').write(path.slice(1)).reset().write('\n');
     res.write('404 :\'(');
     res.end();
@@ -403,7 +405,7 @@ const httpRequestHandler = (req, res) => {
   } else {
     // Other: Browser requests other MIME typed file (handled by 'send')
     msg('file').write(path.slice(1)).reset().write('\n');
-    send(req, path, {root: dir}).pipe(res);
+    send(req, path, { root: dir }).pipe(res);
   }
 };
 
@@ -413,18 +415,22 @@ let HTTP_PORT;
 let HTTP_SERVER;
 let CONNECT_APP;
 
-const findOpenPort = range => new Promise((resolve, reject) => {
-  const props = {
-    startingPort: range[0],
-    endingPort: range[1]
-  };
+const setOrFindOpenPort = (port, range) => new Promise((resolve, reject) => {
+  if (port == null) {
+    const props = {
+      startingPort: range[0],
+      endingPort: range[1]
+    };
 
-  openPort.find(props, (err, port) => {
-    if (err) {
-      return reject(err);
-    }
+    openPort.find(props, (err, port) => {
+      if (err) {
+        return reject(err);
+      }
+      resolve(port);
+    });
+  } else {
     resolve(port);
-  });
+  }
 });
 
 const setLiveReloadPort = port => new Promise(resolve => {
@@ -465,21 +471,21 @@ const serversActivated = () => {
   const serveURL = 'http://' + flags.address + ':' + HTTP_PORT;
 
   msg('start')
-   .write('serving content from ')
-   .fg.white().write(path.resolve(flags.dir)).reset()
-   .write(' on port: ')
-   .fg.white().write(String(HTTP_PORT)).reset()
-   .write('\n');
+    .write('serving content from ')
+    .fg.white().write(path.resolve(flags.dir)).reset()
+    .write(' on port: ')
+    .fg.white().write(String(HTTP_PORT)).reset()
+    .write('\n');
 
   msg('address')
-   .underline().fg.white()
-   .write(serveURL).reset()
-   .write('\n');
+    .underline().fg.white()
+    .write(serveURL).reset()
+    .write('\n');
 
   msg('less')
-   .write('using style from ')
-   .fg.white().write(flags.less).reset()
-   .write('\n');
+    .write('using style from ')
+    .fg.white().write(flags.less).reset()
+    .write('\n');
 
   msg('livereload')
     .write('communicating on port: ')
@@ -508,14 +514,11 @@ const serversActivated = () => {
 };
 
 // Initialize MarkServ
-findOpenPort(PORT_RANGE.LIVE_RELOAD)
+setOrFindOpenPort(flags.livereloadport, PORT_RANGE.LIVE_RELOAD)
   .then(setLiveReloadPort)
   .then(startConnectApp)
   .then(() => {
-    if (flags.port === null) {
-      return findOpenPort(PORT_RANGE.HTTP);
-    }
-    return flags.port;
+      return setOrFindOpenPort(flags.port, PORT_RANGE.HTTP);
   })
   .then(setHTTPPort)
   .then(startHTTPServer)
